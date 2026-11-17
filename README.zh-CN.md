@@ -8,6 +8,8 @@
 
 > English: [`README.md`](./README.md) · 完整构建规格：[`PROJECT_PLAN.zh-CN.md`](./PROJECT_PLAN.zh-CN.md)
 
+> **📌 维护约定（本私有分叉）。** 本仓库是 pvuv.ai 的私有自部署实例，部署于 `pvuv.aweniai.com`。**每次更新、迭代或部署变更，都必须在本文档末尾的 [更新记录](#更新记录) 章节登记**——写明日期与变更摘要（改了什么、为何改）。未登记变更不得提交。部署密钥一律不入库（保存在 Cloudflare Workers Secrets，不进 git）。
+
 pvuv.ai 是一个跑在 Cloudflare 边缘的轻量统计平台。它不只统计 PV/UV,还会给每一次访问打真实性分数,识别只有在聚合层面才会暴露的无效流量,并且可以在判定流量可信时才加载广告代码——帮助保护广告账号免受无效流量牵连。
 
 ## 两种使用方式
@@ -271,3 +273,63 @@ pvuv.ai 以数据最小化为设计原则：
 ## 许可证
 
 [MIT](./LICENSE)。想怎么用就怎么用——自托管、修改、再分发、商用都行，不必开源你的改动，也没有署名要求。作者单独提供的托管多租户 SaaS 版按其自身条款授权，不在本仓库覆盖范围内。
+
+---
+
+## 部署记录（自部署实例：pvuv.aweniai.com）
+
+本仓库是 pvuv.ai 的**私有自部署实例**，部署在 Cloudflare 上，使用 `aweniai.com` 下的三个子域：
+
+| 用途 | 域名 | Worker |
+|---|---|---|
+| 控制台（后台） | `https://pvuv.aweniai.com` | `pvuv-console` |
+| 事件上报（埋点） | `https://in.aweniai.com` | `pvuv-ingest` |
+| 查询 API | `https://api.aweniai.com` | `pvuv-api` |
+
+三个子域由 wrangler 的 `custom_domain = true` 自动建 DNS + TLS，**不占用主域名** `aweniai.com`（主域名仍按原规则跳转 `jevailab.com`，已排除上述三子域）。
+
+### Cloudflare 资源（account `Q371317428@gmail.com's Account`）
+
+| 类型 | 名称 | ID |
+|---|---|---|
+| D1 | `pvuv-db` | `062e5d96-f650-44bb-ac94-fe42f71a940c` |
+| KV | `BLOCKLIST` | `9a3c7fb92e3d45028b18b1ffc58725e9` |
+| KV | `SITE_CONFIG` | `aee7286c18d14d3bb751f1a801191429` |
+| Queue | `pvuv-ingest` | `9c9d4e706c7b46b486a038f226a1246a` |
+| Queue | `pvuv-ingest-dlq` | `c2fc042411ef46b490d1d131c80371b5` |
+
+Worker：`pvuv-ingest` / `pvuv-consumer` / `pvuv-api` / `pvuv-console` / `pvuv-cron`（命名带 `pvuv-` 前缀，与账号内其它项目无冲突）。
+
+### 密钥（均在 Workers Secrets，不落盘）
+
+- `HMAC_KEY`：ingest / api / console 三者共用
+- `GOOGLE_CLIENT_SECRET`：console（Google OAuth 登录）
+
+### 访问限制（个人独占）
+
+仅 `q371317428@gmail.com` 可登录（`ADMIN_EMAILS` 白名单 + `isAdminEmail()` 硬锁双层防护）。无开放注册。
+
+### 本地改动（相对上游）
+
+- `workers/console/src/index.ts`：账号硬锁 + `DELETE /api/sites/:id`（删除站点并清理全部数据）。
+- `workers/console/public/site.html`：站点详情页新增「删除站点」按钮（输入站点名二次确认）。
+- `workers/console/public/i18n.js`：补充中文词条。
+
+### 运维 / 回滚
+
+```bash
+cd "/Volumes/DaHua_SSD/部署项目/codex/其他/pvuv.ai"
+npm run deploy:console                 # 重新部署控制台
+npx wrangler tail -c workers/console/wrangler.toml
+npx wrangler d1 execute pvuv-db --remote --command "SELECT ...;"
+npx wrangler rollback -c workers/console/wrangler.toml   # 回滚代码
+```
+
+> 注意：本机 `npm run setup` 不可用（其 `findD1Id()` 解析 `wrangler d1 list --json` 失败），资源已手工创建并回填配置。完全卸载见私有仓库 `DEPLOY-NOTES.md`，或按运维命令反向操作。
+
+## 更新记录
+
+| 日期 | 变更 |
+|---|---|
+| 2026-11-17 | **重新部署**：代码来源切换到私有仓库 `AWENIAI/pvuv.ai`，在**不重建任何 Cloudflare 资源、不清空 D1** 的前提下重新部署 5 个 Worker（沿用同一账号、D1 `pvuv-db`、KV/Queue 与三个自定义域名）。部署前数据基线 sites=3/events=3124/sessions=730/profiles=654，部署后保持不变（events +2 为部署期间正常上报）。私有改动（账号硬锁、删除站点功能、README 维护约定）全部保留。 |
+| 2026-11-12 | **初始部署**：在 Cloudflare 自部署 pvuv.ai，域名 `pvuv/in/api.aweniai.com`；创建 D1/KV/Queue 与 5 个 Worker；接入 Google OAuth；限制仅 `q371317428@gmail.com` 登录（白名单 + 源码硬锁）。**功能新增**：站点详情页「删除站点」按钮（输入站点名二次确认），后端 `DELETE /api/sites/:id` 清理该站全部数据。详见 `DEPLOY-NOTES.md`。 |

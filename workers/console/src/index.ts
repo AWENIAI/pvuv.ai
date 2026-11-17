@@ -623,6 +623,49 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
 
   // public-dashboard sharing: enable mints a fresh random token (also rotates
   // an existing one), disable clears it — old links die immediately either way.
+  // delete a site and everything it recorded (§18.6): the site row plus every
+  // table that keys by site_id, so no orphan rows survive. The owner check is
+ // the same one every other site route uses.
+  const deleteMatch = path.match(/^\/api\/sites\/([A-Za-z0-9]{4,16})$/);
+  if (deleteMatch && request.method === 'DELETE') {
+    const siteId = deleteMatch[1];
+    const site = await env.DB.prepare('SELECT owner_id FROM sites WHERE site_id = ?').bind(siteId).first<{ owner_id: string }>();
+    if (!site) throw new ApiError(404, 'site not found');
+    if (site.owner_id !== user) throw new ApiError(403, 'not your site');
+
+    // event partitions are per-month (events_YYYYMM) — find every one that
+    // exists rather than guessing, so months created after deploy are covered
+    const evTables = await env.DB.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name GLOB 'events_[0-9][0-9][0-9][0-9][0-9][0-9]'",
+    ).all<{ name: string }>();
+    const stmts = [
+      env.DB.prepare('DELETE FROM sites WHERE site_id = ?').bind(siteId),
+      env.DB.prepare('DELETE FROM sessions WHERE site_id = ?').bind(siteId),
+      env.DB.prepare('DELETE FROM identities WHERE site_id = ?').bind(siteId),
+      env.DB.prepare('DELETE FROM visitor_profiles WHERE site_id = ?').bind(siteId),
+      env.DB.prepare('DELETE FROM rollup_page_daily WHERE site_id = ?').bind(siteId),
+      env.DB.prepare('DELETE FROM rollup_source_daily WHERE site_id = ?').bind(siteId),
+      env.DB.prepare('DELETE FROM rollup_site_daily WHERE site_id = ?').bind(siteId),
+      env.DB.prepare('DELETE FROM rollup_edge_daily WHERE site_id = ?').bind(siteId),
+      env.DB.prepare('DELETE FROM rollup_edge_agent_daily WHERE site_id = ?').bind(siteId),
+      env.DB.prepare('DELETE FROM cluster_flags WHERE site_id = ?').bind(siteId),
+      env.DB.prepare('DELETE FROM anomaly_reports WHERE site_id = ?').bind(siteId),
+      env.DB.prepare('DELETE FROM ai_reports WHERE site_id = ?').bind(siteId),
+      env.DB.prepare('DELETE FROM funnels WHERE site_id = ?').bind(siteId),
+      // a token scoped to this site can no longer mean anything — widen it to
+      // the owner's other sites instead of deleting the credential itself
+      env.DB.prepare('UPDATE api_tokens SET site_id = NULL WHERE site_id = ?').bind(siteId),
+    ];
+    for (const t of evTables.results) {
+      stmts.push(env.DB.prepare(`DELETE FROM ${t.name} WHERE site_id = ?`).bind(siteId));
+    }
+    await env.DB.batch(stmts);
+    // the ingest gate caches site config in KV — drop it so a reused id can
+    // never inherit the deleted site's whitelist
+    await env.SITE_CONFIG.delete(`site:${siteId}`);
+    return json({ ok: true, deleted: siteId });
+  }
+
   const shareMatch = path.match(/^\/api\/sites\/([A-Za-z0-9]{4,16})\/share$/);
   if (shareMatch && request.method === 'POST') {
     const siteId = shareMatch[1];
@@ -860,6 +903,10 @@ async function resolveUser(env: Env, email: string, name: string): Promise<strin
  *  comma-separated). Case-insensitive. */
 function isAdminEmail(env: Env, email: string): boolean {
   const e = email.toLowerCase();
+  // Hard lock: this is a personal, single-owner deployment. No one other than
+  // the owner may sign in or be registered, regardless of ADMIN_EMAILS edits.
+  const OWNER_EMAIL = 'q371317428@gmail.com';
+  if (e !== OWNER_EMAIL) return false;
   return (env.ADMIN_EMAILS ?? '')
     .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
     .includes(e);

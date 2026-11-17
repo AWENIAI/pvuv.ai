@@ -279,6 +279,13 @@
       'anom-source': '来自“{src}”的流量达到其近期均值的 {x} 倍({from} → {to} 访客)',
       'shadow-banner': '仅记录不拦截,广告还会继续加载 {days} 天。按当前档位,本时段将有 {blocked} 的浏览量在启用拦截后被拦下。',
       'Start blocking ads for suspected invalid traffic now? This ends the record-only window and can\'t be undone.': '现在就开始对疑似无效流量拦截广告?这将结束"仅记录"窗口且不可撤销。',
+      'Delete site': '删除站点',
+      'Delete this site and all its data': '删除该站点及其全部数据',
+      'This permanently deletes the site and all of its collected data. This cannot be undone.': '这将永久删除该站点及其收集到的所有数据,且不可撤销。',
+      'Type the site name to confirm:': '输入站点名称以确认:',
+      'Cancel': '取消',
+      'Delete failed': '删除失败',
+      'Deleting…': '删除中…',
     },
     ja: {
       'API tokens': 'API トークン',

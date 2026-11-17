@@ -153,6 +153,7 @@
   <button id="embedBtn" class="btn" title="The tracking snippet for this site" data-i18n-title="The tracking snippet for this site">&lt;/&gt; <span data-i18n="Embed code">Embed code</span></button>
   <button id="shareBtn" class="btn" title="Read-only public dashboard link">🔗 <span data-i18n="Share link">Share link</span></button>
   <button id="dlBtn" class="btn" title="Download all data for the selected range as JSON">⬇ <span data-i18n="Download data">Download data</span></button>
+  <button id="deleteBtn" class="btn danger" title="Delete this site and all its data">🗑 <span data-i18n="Delete site">Delete site</span></button>
   </div>
 </header>
 <main>
@@ -1924,6 +1925,50 @@ async function setShare(enable) {
   } catch { /* leave the modal as-is */ }
 }
 document.getElementById('shareBtn').addEventListener('click', renderShareModal);
+
+// Delete this site. Irreversible — it drops the site and every row it
+// recorded, so it asks for the site name typed back before it fires.
+function renderDeleteModal() {
+  const name = siteName || site;
+  document.getElementById('modalTitle').textContent = t('Delete site');
+  document.getElementById('modalBody').innerHTML = `
+    <p>${te('This permanently deletes the site and all of its collected data. This cannot be undone.')}</p>
+    <p style="margin-top:10px">${te('Type the site name to confirm:')} <b>${esc(name)}</b></p>
+    <input id="delConfirm" type="text" autocomplete="off" placeholder="${esc(name)}" style="width:100%;margin-top:8px">
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn" id="delCancel">${te('Cancel')}</button>
+      <button class="btn danger" id="delOk" disabled>${te('Delete site')}</button>
+    </div>
+    <p class="muted" id="delMsg" style="margin-top:10px"></p>`;
+  document.getElementById('modal').hidden = false;
+
+  const input = document.getElementById('delConfirm');
+  const ok = document.getElementById('delOk');
+  const msg = document.getElementById('delMsg');
+  // the confirm button only unlocks on an exact name match — no accidental
+  // click-through on a destructive action
+  input.addEventListener('input', () => { ok.disabled = input.value.trim() !== name; });
+  document.getElementById('delCancel').addEventListener('click', closeModal);
+  ok.addEventListener('click', async () => {
+    ok.disabled = true;
+    msg.textContent = te('Deleting…');
+    try {
+      const r = await guard(await fetch(`/api/sites/${encodeURIComponent(site)}`, { method: 'DELETE' }));
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        msg.textContent = d.error || te('Delete failed');
+        ok.disabled = false;
+        return;
+      }
+      location.href = '/sites.html';
+    } catch {
+      msg.textContent = te('Delete failed');
+      ok.disabled = false;
+    }
+  });
+  input.focus();
+}
+document.getElementById('deleteBtn').addEventListener('click', renderDeleteModal);
 
 // Goals = custom (non-lifecycle) events; the panel hides itself when the site
 // sends none, so it never clutters sites that don't use pvuv('event', …).

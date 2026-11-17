@@ -7,7 +7,7 @@
 name = "pvuv-consumer"
 main = "src/index.ts"
 compatibility_date = "2026-06-01"
-account_id = "PLACEHOLDER_ACCOUNT_ID"
+account_id = "0a9b110b9b2a824a62004210f7d21a2b"
 
 [[queues.consumers]]
 queue = "pvuv-ingest"
@@ -21,7 +21,7 @@ dead_letter_queue = "pvuv-ingest-dlq"
 [[d1_databases]]
 binding = "DB"
 database_name = "pvuv-db"
-database_id = "PLACEHOLDER_D1_DATABASE_ID"
+database_id = "062e5d96-f650-44bb-ac94-fe42f71a940c"
 
 [observability]
 enabled = true
