@@ -178,10 +178,18 @@ async function run() {
   $('run').disabled = false;
 }
 
-$('ingestUrl').value = defaultIngest();
+// make sure we're logged in before showing anything actionable, and use the
+// deployment-private ingest host from /api/me (INGEST_HOST in wrangler.toml)
+// instead of deriving it from the console hostname — in.<console-host> is only
+// right when the console sits on the apex (it doesn't: pvuv.aweniai.com here).
+fetch('/api/me').then(async (r) => {
+  if (r.status === 401) { location.href = '/login.html'; return; }
+  try {
+    const me = await r.json();
+    $('ingestUrl').value = me.ingest_host ? `https://${me.ingest_host}` : defaultIngest();
+  } catch { $('ingestUrl').value = defaultIngest(); }
+}).catch(() => { $('ingestUrl').value = defaultIngest(); });
 $('run').addEventListener('click', run);
-// make sure we're logged in before showing anything actionable
-fetch('/api/me').then((r) => { if (r.status === 401) location.href = '/login.html'; });
 </script>
 </body>
 </html>

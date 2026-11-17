@@ -331,5 +331,6 @@ npx wrangler rollback -c workers/console/wrangler.toml   # 回滚代码
 
 | 日期 | 变更 |
 |---|---|
+| 2026-11-17 | **修复自检页上报域名**：`health.html` 原来用控制台域名拼出 `in.pvuv.aweniai.com`（错误），改为从 `/api/me` 读取部署配置的 `ingest_host`（`in.aweniai.com`），本地开发仍回退到 8787 端口。重新部署 console（版本 `43bc22dc`）。 |
 | 2026-11-17 | **重新部署**：代码来源切换到私有仓库 `AWENIAI/pvuv.ai`，在**不重建任何 Cloudflare 资源、不清空 D1** 的前提下重新部署 5 个 Worker（沿用同一账号、D1 `pvuv-db`、KV/Queue 与三个自定义域名）。部署前数据基线 sites=3/events=3124/sessions=730/profiles=654，部署后保持不变（events +2 为部署期间正常上报）。私有改动（账号硬锁、删除站点功能、README 维护约定）全部保留。 |
 | 2026-11-12 | **初始部署**：在 Cloudflare 自部署 pvuv.ai，域名 `pvuv/in/api.aweniai.com`；创建 D1/KV/Queue 与 5 个 Worker；接入 Google OAuth；限制仅 `q371317428@gmail.com` 登录（白名单 + 源码硬锁）。**功能新增**：站点详情页「删除站点」按钮（输入站点名二次确认），后端 `DELETE /api/sites/:id` 清理该站全部数据。详见 `DEPLOY-NOTES.md`。 |
