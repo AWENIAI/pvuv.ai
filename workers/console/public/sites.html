@@ -268,7 +268,7 @@ async function loadSites() {
         <div class="stat"><div class="v">…</div><div class="k">${te('Visitors')}</div></div>
         <div class="stat"><div class="v">…</div><div class="k">${te('Sessions')}</div></div>
       </div>
-      <div class="foot"><span class="tag" title="${te('Timezone')}">🕒 ${esc(s.timezone || 'UTC')}</span><span class="tag" title="${te('Ad protection mode')}">🛡 ${te(s.adguard_mode || 'off')}</span><span class="spacer"></span><span class="tag good" id="hs-${esc(s.site_id)}"></span></div>
+      <div class="foot"><span class="tag" title="${te('Timezone')}">🕒 ${esc(s.timezone || 'UTC')}</span><span class="tag" title="${te('Ad protection mode')}">🛡 ${te(s.adguard_mode || 'off')}</span>${s.shadow_until && s.shadow_until > Date.now() ? `<span class="tag shadow" title="${te('Shadow mode')}">${te('Shadow mode')}</span>` : ''}<span class="spacer"></span><span class="tag good" id="hs-${esc(s.site_id)}"></span></div>
     </a>`).join('') + '</div>';
 
   // ONE request for every card. This used to be one /overview per site, and

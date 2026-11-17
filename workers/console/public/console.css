@@ -172,6 +172,7 @@ td.lead .lead-in > .txt { overflow: hidden; text-overflow: ellipsis; white-space
 .tag.good { background: var(--good-bg); color: var(--good-text); }
 .tag.warn { background: #33290f; color: var(--warn); }
 .tag.bad { background: #331414; color: var(--bad); }
+.tag.shadow { background: var(--accent-2); color: #fff; }
 .chip { display: inline-flex; align-items: center; gap: 7px; background: #1c2431; border: 1px solid #2f3a4d; color: var(--text-2); border-radius: 14px; padding: 3px 6px 3px 11px; font-size: 12.5px; }
 .chip b { font-weight: 600; color: var(--text); }
 .chip .x { background: #313d50; border: 0; color: var(--text-2); width: 17px; height: 17px; border-radius: 50%; line-height: 1; font-size: 13px; padding: 0; }
